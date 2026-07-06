@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Color Orb Studio v14</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#171717;color:#eee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.app{max-width:1220px;margin:auto;padding:10px;display:grid;grid-template-columns:minmax(320px,540px) minmax(320px,1fr);gap:10px}
+.viewer{position:sticky;top:0;align-self:start;background:#232323;border:1px solid #444;border-radius:16px;padding:10px;z-index:3}
+#orbCanvas{width:100%;aspect-ratio:1/1;display:block;border-radius:12px;background:#202020}
+.panel{background:#242424;border:1px solid #444;border-radius:16px;padding:12px}
+h1{font-size:18px;margin:0 0 8px}
+input,select,button{width:100%;border:1px solid #666;background:#333;color:#eee;border-radius:8px;padding:8px;font-size:14px}
+button{background:#3d75b8;border-color:#679cda;font-weight:700;cursor:pointer}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 10px}
+.tab{background:#333}.tab.active{background:#4f86c6;border-color:#8cbaf0}
+.picker{display:grid;grid-template-columns:1fr 28px;gap:8px;margin-bottom:10px}
+#svCanvas{width:100%;height:210px;border:1px solid #666;border-radius:8px;cursor:crosshair;touch-action:none}
+#hueCanvas{width:28px;height:210px;border:1px solid #666;border-radius:8px;cursor:pointer;touch-action:none}
+.field{margin-bottom:10px}
+label{display:flex;justify-content:space-between;font-size:13px;color:#ddd;margin-bottom:5px}
+.colorbar{display:grid;grid-template-columns:104px 1fr 58px;gap:8px;align-items:center;margin-bottom:8px}
+input[type=range]{padding:0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.chip{height:34px;border-radius:8px;border:1px solid #555}.chipLabel{font-size:11px;color:#bbb;margin-top:3px}
+.mini{font-size:12px;color:#aaa;line-height:1.35;margin-top:10px}
+@media(max-width:850px){
+ .app{grid-template-columns:1fr;padding:0}
+ .viewer{border-radius:0 0 16px 16px}
+ #orbCanvas{max-height:42vh;width:auto;max-width:100%;margin:auto}
+ .panel{border-radius:0;border-left:0;border-right:0}
+ .tabs{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<section class="viewer"><canvas id="orbCanvas" width="820" height="820"></canvas></section>
+
+<section class="panel">
+<h1>Color Orb Studio v14</h1>
+<div class="field"><input id="objectName" value="Painterly sphere study" placeholder="Object name"></div>
+
+<div class="tabs">
+<button class="tab active" id="localTab">Object</button>
+<button class="tab" id="keyTab">Key Light</button>
+<button class="tab" id="ambientTab">Ambient</button>
+<button class="tab" id="bounceTab">Bounce</button>
+</div>
+
+<div class="picker">
+<canvas id="svCanvas" width="420" height="230"></canvas>
+<canvas id="hueCanvas" width="32" height="230"></canvas>
+</div>
+
+<div class="field"><label>Hex <span id="hexReadout"></span></label><input id="hexInput"></div>
+<div class="colorbar"><span>Hue</span><input id="hue" type="range" min="0" max="360"><span id="hueVal"></span></div>
+<div class="colorbar"><span>Sat</span><input id="sat" type="range" min="0" max="100"><span id="satVal"></span></div>
+<div class="colorbar"><span>Value</span><input id="val" type="range" min="0" max="100"><span id="valVal"></span></div>
+
+<div class="row">
+<div class="field"><label>Light Angle <span id="angleVal"></span></label><input id="angle" type="range" min="0" max="360" value="220"></div>
+<div class="field"><label>Key Strength <span id="keyVal"></span></label><input id="keyPower" type="range" min="0" max="100" value="80"></div>
+</div>
+<div class="row">
+<div class="field"><label>Light Color Influence <span id="lightMixVal"></span></label><input id="lightMix" type="range" min="0" max="100" value="82"></div>
+<div class="field"><label>Ambient Strength <span id="ambientVal"></span></label><input id="ambientPower" type="range" min="0" max="100" value="42"></div>
+</div>
+<div class="row">
+<div class="field"><label>Bounce Strength <span id="bounceVal"></span></label><input id="bouncePower" type="range" min="0" max="100" value="62"></div>
+<div class="field"><label>Shadow Depth <span id="shadowVal"></span></label><input id="shadowDepth" type="range" min="0" max="100" value="72"></div>
+</div>
+<div class="row">
+<div class="field"><label>Color Wiggle <span id="wiggleVal"></span></label><input id="wiggle" type="range" min="0" max="100" value="58"></div>
+<div class="field"><label>Same Value Lock <span id="valueLockVal"></span></label><input id="valueLock" type="range" min="0" max="100" value="82"></div>
+</div>
+<div class="row">
+<div class="field"><label>Brush Size <span id="brushVal"></span></label><input id="brushSize" type="range" min="0" max="100" value="52"></div>
+<div class="field"><label>Paint Blend <span id="blendVal"></span></label><input id="blend" type="range" min="0" max="100" value="48"></div>
+</div>
+<div class="row">
+<div class="field"><label>Thick Paint Accents <span id="impastoVal"></span></label><input id="impasto" type="range" min="0" max="100" value="38"></div>
+<div class="field"><label>Mode</label><select id="mode"><option value="marco">Marco / broken color</option><option value="classical">Classical smooth</option><option value="temperature">Temperature study</option><option value="value">Value study</option></select></div>
+</div>
+<div class="row">
+<div class="field"><label>Brush Type</label><select id="brushType"><option value="filbert">Filbert</option><option value="flat">Flat</option><option value="knife">Palette knife</option></select></div>
+<div class="field"><label>Shadow Temperature</label><select id="shadowTemp"><option value="auto">Opposite key light</option><option value="cool">Cooler</option><option value="warm">Warmer</option><option value="local">Mostly local</option></select></div>
+</div>
+
+<button id="randomize">Random study</button>
+
+<div class="swatches">
+<div><div class="chip" id="cLocal"></div><div class="chipLabel">Local</div></div>
+<div><div class="chip" id="cKey"></div><div class="chipLabel">Key light</div></div>
+<div><div class="chip" id="cLight"></div><div class="chipLabel">Light plane</div></div>
+<div><div class="chip" id="cHalf"></div><div class="chipLabel">Halftone</div></div>
+<div><div class="chip" id="cTerm"></div><div class="chipLabel">Terminator</div></div>
+<div><div class="chip" id="cShadow"></div><div class="chipLabel">Core shadow</div></div>
+<div><div class="chip" id="cBounce"></div><div class="chipLabel">Bounce</div></div>
+<div><div class="chip" id="cAmbient"></div><div class="chipLabel">Ambient</div></div>
+</div>
+
+<p class="mini">v14 removes random dark impasto marks. Thick accents now only appear as lighter loaded paint on the lit side, reflected-light side, and a few soft edge notes.</p>
+</section>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const orb=$("orbCanvas"),ctx=orb.getContext("2d");
+const sv=$("svCanvas"),svCtx=sv.getContext("2d");
+const hueC=$("hueCanvas"),hueCtx=hueC.getContext("2d");
+let active="local";
+let colors={local:{h:205,s:78,v:76},key:{h:38,s:55,v:100},ambient:{h:220,s:22,v:52},bounce:{h:32,s:55,v:72}};
+let renderQueued=false,pickerQueued=false;
+
+function clamp(n,a,b){return Math.max(a,Math.min(b,n))}
+function wrap(h){return ((h%360)+360)%360}
+function mix(a,b,t){return a+(b-a)*t}
+function hueMix(a,b,t){let d=((b-a+540)%360)-180;return wrap(a+d*t)}
+function hueDist(a,b){let d=Math.abs(wrap(a)-wrap(b));return Math.min(d,360-d)}
+function noise(x,y){let n=Math.sin(x*12.9898+y*78.233)*43758.5453;return n-Math.floor(n)}
+function hsvToRgb(h,s,v){
+ h=wrap(h);s/=100;v/=100;let c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c,r=0,g=0,b=0;
+ if(h<60){r=c;g=x}else if(h<120){r=x;g=c}else if(h<180){g=c;b=x}else if(h<240){g=x;b=c}else if(h<300){r=x;b=c}else{r=c;b=x}
+ return {r:Math.round((r+m)*255),g:Math.round((g+m)*255),b:Math.round((b+m)*255)}
+}
+function rgbToHsv(r,g,b){
+ r/=255;g/=255;b/=255;let max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min,h=0;
+ if(d){if(max===r)h=60*(((g-b)/d)%6);else if(max===g)h=60*((b-r)/d+2);else h=60*((r-g)/d+4)}
+ return {h:wrap(h),s:max?d/max*100:0,v:max*100}
+}
+function hex(c){let r=hsvToRgb(c.h,c.s,c.v);return "#"+[r.r,r.g,r.b].map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase()}
+function parseHex(v){v=v.replace("#","").trim();if(v.length===3)v=v.split("").map(x=>x+x).join("");if(!/^[0-9a-fA-F]{6}$/.test(v))return null;return rgbToHsv(parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16))}
+function rgba(c,a){let r=hsvToRgb(c.h,c.s,c.v);return `rgba(${r.r},${r.g},${r.b},${a})`}
+function setChip(id,c){$(id).style.background=hex(c)}
+
+function scheduleAll(){schedulePicker();scheduleRender()}
+function schedulePicker(){if(pickerQueued)return;pickerQueued=true;requestAnimationFrame(()=>{pickerQueued=false;drawPicker()})}
+function scheduleRender(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;drawOrb()})}
+
+function setTab(name){
+ active=name;
+ ["local","key","ambient","bounce"].forEach(n=>$(n==="key"?"keyTab":n+"Tab").classList.toggle("active",n===name));
+ schedulePicker();
+}
+$("localTab").onclick=()=>setTab("local");$("keyTab").onclick=()=>setTab("key");$("ambientTab").onclick=()=>setTab("ambient");$("bounceTab").onclick=()=>setTab("bounce");
+
+function drawPicker(){
+ const c=colors[active];
+ $("hue").value=Math.round(c.h);$("sat").value=Math.round(c.s);$("val").value=Math.round(c.v);
+ $("hueVal").textContent=Math.round(c.h);$("satVal").textContent=(c.s/100).toFixed(2);$("valVal").textContent=(c.v/100).toFixed(2);
+ $("hexInput").value=hex(c);$("hexReadout").textContent=active;
+ const w=sv.width,h=sv.height;
+ let hg=svCtx.createLinearGradient(0,0,w,0);hg.addColorStop(0,"#fff");hg.addColorStop(1,`hsl(${c.h} 100% 50%)`);
+ svCtx.fillStyle=hg;svCtx.fillRect(0,0,w,h);
+ let vg=svCtx.createLinearGradient(0,0,0,h);vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,1)");
+ svCtx.fillStyle=vg;svCtx.fillRect(0,0,w,h);
+ let x=c.s/100*w,y=(1-c.v/100)*h;svCtx.strokeStyle="#fff";svCtx.lineWidth=3;svCtx.beginPath();svCtx.arc(x,y,10,0,Math.PI*2);svCtx.stroke();svCtx.strokeStyle="#111";svCtx.lineWidth=1;svCtx.beginPath();svCtx.arc(x,y,12,0,Math.PI*2);svCtx.stroke();
+ const grad=hueCtx.createLinearGradient(0,0,0,hueC.height);for(let i=0;i<=1;i+=1/12)grad.addColorStop(i,`hsl(${i*360} 100% 50%)`);
+ hueCtx.fillStyle=grad;hueCtx.fillRect(0,0,hueC.width,hueC.height);let hy=c.h/360*hueC.height;hueCtx.strokeStyle="#fff";hueCtx.lineWidth=3;hueCtx.strokeRect(0,hy-4,hueC.width,8);
+}
+
+function lightColor(local,key,keyPower,lightMix){
+ return {h:hueMix(local.h,key.h,clamp(.15+.70*keyPower*lightMix,0,.92)),s:clamp(mix(local.s,key.s,.48*lightMix)+8*keyPower,0,100),v:clamp(local.v+34*keyPower,0,100)}
+}
+function shadowColor(local,key,keyPower,depth){
+ let mode=$("shadowTemp").value,target=local.h;
+ if(mode==="cool")target=220; else if(mode==="warm")target=35; else if(mode==="auto")target=(hueDist(key.h,42)<hueDist(key.h,220)?220:35);
+ return {h:hueMix(local.h,target,mode==="local"?0:(.12+.16*keyPower)),s:clamp(local.s+10*depth,0,100),v:clamp(local.v-(34+38*depth),3,44)}
+}
+function makeHarmony(local,wiggle){
+ let w=wiggle; let arr=[
+  {h:local.h,s:local.s,v:local.v},
+  {h:wrap(local.h-20*w),s:clamp(local.s+6,0,100),v:local.v},
+  {h:wrap(local.h+22*w),s:clamp(local.s+7,0,100),v:local.v},
+  {h:wrap(local.h-48*w),s:clamp(local.s+5,0,100),v:local.v},
+  {h:wrap(local.h+52*w),s:clamp(local.s+5,0,100),v:local.v},
+  {h:wrap(local.h+130*w),s:clamp(local.s-10,0,100),v:local.v},
+  {h:wrap(local.h-130*w),s:clamp(local.s-10,0,100),v:local.v}
+ ];
+ return arr;
+}
+function applyMode(c){
+ let m=$("mode").value;
+ if(m==="value"){return {h:0,s:0,v:c.v}}
+ if(m==="temperature"){return {h:c.h<180?210:35,s:55,v:c.v}}
+ if(m==="classical"){return {h:c.h,s:clamp(c.s*.75,0,100),v:c.v}}
+ return c;
+}
+function formT(x,y,cx,cy,r,lx,ly){
+ let dx=x-cx,dy=y-cy,dist=Math.hypot(dx,dy); if(dist>r)return null;
+ let nx=dx/r,ny=dy/r,nz=Math.sqrt(Math.max(0,1-nx*nx-ny*ny));
+ let dot=nx*lx+ny*ly+nz*.66;
+ return {t:clamp((dot+.18)/1.28,0,1),nx,ny,nz,dist}
+}
+function formColor(f,local,lit,half,term,shadow,bounce,ambient,bouncePower,ambientPower){
+ let t=f.t,c;
+ if(t>.60){let k=(t-.60)/.40;c={h:hueMix(half.h,lit.h,k),s:mix(half.s,lit.s,k),v:mix(half.v,lit.v,k)}}
+ else if(t>.38){let k=(t-.38)/.22;c={h:hueMix(term.h,half.h,k),s:mix(term.s,half.s,k),v:mix(term.v,half.v,k)}}
+ else {let k=t/.38;c={h:hueMix(shadow.h,term.h,k),s:mix(shadow.s,term.s,k),v:mix(shadow.v,term.v,k)}}
+ let ba=clamp((f.ny*.95 + .10)*(1-t),0,1)*bouncePower;
+ c.h=hueMix(c.h,bounce.h,ba*.55);c.s=mix(c.s,bounce.s,ba*.45);c.v=mix(c.v,bounce.v,ba*.75);
+ let aa=(1-t)*ambientPower*.35;c.h=hueMix(c.h,ambient.h,aa);c.s=mix(c.s,ambient.s,aa);c.v=mix(c.v,ambient.v,aa*.25);
+ return applyMode({h:c.h,s:clamp(c.s,0,100),v:clamp(c.v,0,100)});
+}
+function paintStroke(ctx,x,y,len,width,angle,c,alpha,type,seed,edge=false){
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.rotate(angle);
+ ctx.globalAlpha=alpha;
+ ctx.fillStyle=rgba(c,1);
+
+ // No black outlines. Edges are a slightly lighter/darker paint ridge, not ink.
+ const edgeColor = edge
+   ? {h:c.h,s:clamp(c.s+4,0,100),v:clamp(c.v-6,0,100)}
+   : {h:c.h,s:clamp(c.s-4,0,100),v:clamp(c.v+6,0,100)};
+ ctx.strokeStyle=rgba(edgeColor,.28);
+ ctx.lineWidth=Math.max(1,width*.06);
+
+ if(type==="flat"){
+   ctx.beginPath();
+   ctx.roundRect(-len/2,-width/2,len,width,Math.max(2,width*.28));
+   ctx.fill(); ctx.stroke();
+ } else if(type==="knife"){
+   ctx.beginPath();
+   ctx.moveTo(-len*.50,-width*.18);
+   ctx.lineTo(len*.42,-width*.32);
+   ctx.lineTo(len*.50,width*.10);
+   ctx.lineTo(-len*.42,width*.28);
+   ctx.closePath();
+   ctx.fill(); ctx.stroke();
+ } else {
+   ctx.beginPath();
+   ctx.ellipse(0,0,len/2,width/2,0,0,Math.PI*2);
+   ctx.fill(); ctx.stroke();
+ }
+
+ // loaded paint ridge
+ ctx.globalAlpha=alpha*.34;
+ ctx.strokeStyle=rgba({h:c.h,s:clamp(c.s-8,0,100),v:clamp(c.v+14,0,100)},1);
+ ctx.lineWidth=Math.max(1,width*.13);
+ ctx.beginPath();
+ ctx.moveTo(-len*.35,0);
+ ctx.quadraticCurveTo(0,width*.08,len*.35,-width*.03);
+ ctx.stroke();
+
+ ctx.restore();
+ ctx.globalAlpha=1;
+}
+
+function drawOrb(){
+ const W=orb.width,H=orb.height,local=colors.local,key=colors.key,ambient=colors.ambient,bounceBase=colors.bounce;
+ const angle=+$("angle").value,keyPower=+$("keyPower").value/100,lightMix=+$("lightMix").value/100,ambientPower=+$("ambientPower").value/100,bouncePower=+$("bouncePower").value/100,shadowDepth=+$("shadowDepth").value/100,wiggle=+$("wiggle").value/100,valueLock=+$("valueLock").value/100,brushSize=+$("brushSize").value/100,blend=+$("blend").value/100,impasto=+$("impasto").value/100;
+ $("angleVal").textContent=angle+"°";$("keyVal").textContent=Math.round(keyPower*100)+"%";$("lightMixVal").textContent=Math.round(lightMix*100)+"%";$("ambientVal").textContent=Math.round(ambientPower*100)+"%";$("bounceVal").textContent=Math.round(bouncePower*100)+"%";$("shadowVal").textContent=Math.round(shadowDepth*100)+"%";$("wiggleVal").textContent=Math.round(wiggle*100)+"%";$("valueLockVal").textContent=Math.round(valueLock*100)+"%";$("brushVal").textContent=Math.round(brushSize*100)+"%";$("blendVal").textContent=Math.round(blend*100)+"%";$("impastoVal").textContent=Math.round(impasto*100)+"%";
+ let lit=lightColor(local,key,keyPower,lightMix),shadow=shadowColor(local,key,keyPower,shadowDepth),half={h:hueMix(local.h,lit.h,.34),s:clamp(local.s+2,0,100),v:clamp(local.v+8*keyPower,0,96)},term={h:hueMix(shadow.h,half.h,.35),s:clamp(local.s+8,0,100),v:clamp(local.v-18*shadowDepth,4,70)},bounce={h:hueMix(shadow.h,bounceBase.h,.62*bouncePower),s:clamp(mix(shadow.s,bounceBase.s,.45*bouncePower),0,100),v:clamp(shadow.v+34*bouncePower,0,78)},bg={h:hueMix(ambient.h,local.h,.45),s:clamp(ambient.s*.45+local.s*.04,0,40),v:42};
+ setChip("cLocal",local);setChip("cKey",key);setChip("cLight",lit);setChip("cHalf",half);setChip("cTerm",term);setChip("cShadow",shadow);setChip("cBounce",bounce);setChip("cAmbient",ambient);
+ ctx.clearRect(0,0,W,H);ctx.fillStyle="#202020";ctx.fillRect(0,0,W,H);ctx.fillStyle=rgba(bg,1);ctx.fillRect(90,90,W-180,H-180);
+ const cx=W/2,cy=H/2+18,r=W*.29,a=(angle-90)*Math.PI/180,lx=Math.cos(a),ly=Math.sin(a);
+ let cast={h:shadow.h,s:clamp(shadow.s-10,0,100),v:clamp(shadow.v-14,2,18)};
+ ctx.save();ctx.translate(cx-lx*105,cy-ly*80+r*.82);ctx.rotate(a+.35);let cg=ctx.createRadialGradient(0,0,5,0,0,r*1.55);cg.addColorStop(0,rgba(cast,.70));cg.addColorStop(1,rgba(cast,0));ctx.fillStyle=cg;ctx.beginPath();ctx.ellipse(0,0,r*1.35,r*.33,0,0,Math.PI*2);ctx.fill();ctx.restore();
+ ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+
+ // Pass 1: smooth block-in
+ let grad=ctx.createRadialGradient(cx+lx*r*.58,cy+ly*r*.58,8,cx,cy,r*1.16);grad.addColorStop(0,rgba(applyMode(lit),1));grad.addColorStop(.45,rgba(applyMode(half),1));grad.addColorStop(.62,rgba(applyMode(term),1));grad.addColorStop(.82,rgba(applyMode(shadow),1));grad.addColorStop(1,"rgba(0,0,0,1)");ctx.fillStyle=grad;ctx.fillRect(cx-r,cy-r,r*2,r*2);
+ let keyWash=ctx.createRadialGradient(cx+lx*r*.58,cy+ly*r*.58,5,cx+lx*r*.1,cy+ly*r*.1,r*1.05);keyWash.addColorStop(0,rgba(key,.35*keyPower*lightMix));keyWash.addColorStop(.55,rgba(key,.12*keyPower*lightMix));keyWash.addColorStop(1,rgba(key,0));ctx.fillStyle=keyWash;ctx.fillRect(cx-r,cy-r,r*2,r*2);
+ let bounceWash=ctx.createRadialGradient(cx-lx*r*.33,cy+r*.68,5,cx-lx*r*.33,cy+r*.68,r*.78);bounceWash.addColorStop(0,rgba(bounce,.48*bouncePower));bounceWash.addColorStop(.50,rgba(bounce,.18*bouncePower));bounceWash.addColorStop(1,rgba(bounce,0));ctx.fillStyle=bounceWash;ctx.fillRect(cx-r,cy,r*2,r);
+
+ const harmony=makeHarmony(local,wiggle);
+ // Pass 2: blended form strokes
+ const blendCount=Math.floor(130+blend*210);
+ for(let i=0;i<blendCount;i++){
+   let rr=r*Math.sqrt(noise(i*3.7,i*.53)),th=noise(i*4.9,i*7.7)*Math.PI*2,x=cx+Math.cos(th)*rr,y=cy+Math.sin(th)*rr,f=formT(x,y,cx,cy,r,lx,ly); if(!f)continue;
+   let base=formColor(f,local,lit,half,term,shadow,bounce,ambient,bouncePower,ambientPower);
+   let note=harmony[Math.floor(noise(i*2.13,i*.61)*harmony.length)];
+   let c={h:hueMix(base.h,note.h,.18+.55*wiggle),s:mix(base.s,note.s,.25),v:mix(note.v,base.v,valueLock)};
+   c=applyMode(c);
+   let len=mix(34,96,noise(i*.21,i*5.2)),width=mix(13,30,noise(i*1.9,i*.4)),ang=th+Math.PI/2+(noise(i,11)-.5)*.65;
+   ctx.strokeStyle=rgba(c,.06+blend*.11);ctx.lineWidth=width;ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();ctx.moveTo(x-Math.cos(ang)*len*.5,y-Math.sin(ang)*len*.5);ctx.quadraticCurveTo(x+Math.cos(ang+.4)*len*.08,y+Math.sin(ang+.4)*len*.08,x+Math.cos(ang)*len*.5,y+Math.sin(ang)*len*.5);ctx.stroke();
+ }
+
+ // Pass 3: visible painterly brush strokes
+ const strokeCount=Math.floor(80+brushSize*150);
+ for(let i=0;i<strokeCount;i++){
+   let rr=r*Math.sqrt(noise(i*5.1,i*.73)),th=noise(i*8.2,i*3.1)*Math.PI*2,x=cx+Math.cos(th)*rr,y=cy+Math.sin(th)*rr,f=formT(x,y,cx,cy,r,lx,ly); if(!f)continue;
+   let base=formColor(f,local,lit,half,term,shadow,bounce,ambient,bouncePower,ambientPower);
+   let note=harmony[Math.floor(noise(i*1.77,i*2.43)*harmony.length)];
+   let c={h:hueMix(base.h,note.h,.22+.62*wiggle),s:mix(base.s,note.s,.32),v:mix(note.v,base.v,valueLock)};
+   c=applyMode(c);
+   let len=mix(20,58,noise(i*.31,i*5.8))*mix(.75,1.25,brushSize),width=mix(5,16,noise(i*1.5,i*.6))*mix(.8,1.35,brushSize),ang=th+Math.PI/2+(noise(i,12)-.5)*.6;
+   let alpha=clamp(.12+brushSize*.18+impasto*.06-blend*.06,.08,.38);
+   paintStroke(ctx,x,y,len,width,ang,c,alpha,$("brushType").value,i);
+ }
+
+ // Pass 4: thick paint accents only where paint would catch light.
+ const accentCount=Math.floor(10+impasto*34);
+ for(let i=0;i<accentCount;i++){
+   const lightZone = noise(i,4)>.22;
+   const rimZone = !lightZone && noise(i,5)>.55;
+
+   // Bias accents toward the lit plane, highlight, and reflected-light side.
+   let th, rr;
+   if(lightZone){
+     th=Math.atan2(ly,lx)+mix(-.62,.62,noise(i,8));
+     rr=r*mix(.12,.62,noise(i*2.2,i*.9));
+   } else if(rimZone){
+     th=Math.atan2(ly,lx)+mix(.85,1.55,noise(i,9));
+     rr=r*mix(.58,.88,noise(i*2.7,i*.33));
+   } else {
+     th=Math.PI/2+mix(-.65,.65,noise(i,10));
+     rr=r*mix(.35,.72,noise(i*1.8,i*.52));
+   }
+
+   let x=cx+Math.cos(th)*rr,y=cy+Math.sin(th)*rr,f=formT(x,y,cx,cy,r,lx,ly);
+   if(!f)continue;
+
+   // Skip deep shadow accents so they do not become random black marks.
+   if(f.t < .28 && !rimZone) continue;
+
+   let c=lightZone ? lit : (rimZone ? half : bounce);
+   c={h:c.h,s:clamp(c.s-4,0,100),v:clamp(c.v+10+12*impasto,0,100)};
+   c=applyMode(c);
+
+   let len=mix(16,40,noise(i,3))*mix(.7,1.2,impasto);
+   let width=mix(4,10,noise(i,4))*mix(.7,1.25,impasto);
+   let ang=th+Math.PI/2+(noise(i,11)-.5)*.35;
+   paintStroke(ctx,x,y,len,width,ang,c,.20+impasto*.30,$("brushType").value,i+1000,true);
+ }
+ const spec={h:key.h,s:clamp(key.s-12,0,100),v:100};ctx.fillStyle=rgba(applyMode(spec),.78);ctx.beginPath();ctx.ellipse(cx+lx*r*.50-r*.04,cy+ly*r*.50-r*.02,r*.035,r*.055,.65,0,Math.PI*2);ctx.fill();
+ ctx.restore();
+ ctx.strokeStyle="rgba(0,0,0,.60)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+ ctx.fillStyle=rgba(key,1);ctx.beginPath();ctx.arc(cx+lx*r*1.45,cy+ly*r*1.45,13,0,Math.PI*2);ctx.fill();ctx.fillStyle=rgba(bounceBase,1);ctx.beginPath();ctx.arc(cx-lx*r*1.35,cy+r*1.12,10,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="rgba(255,255,255,.88)";ctx.font="22px system-ui";ctx.fillText($("objectName").value||"Object",90,62);
+}
+
+function syncSliders(){colors[active]={h:+$("hue").value,s:+$("sat").value,v:+$("val").value};scheduleAll()}
+["hue","sat","val"].forEach(id=>$(id).addEventListener("input",syncSliders));
+["angle","keyPower","lightMix","ambientPower","bouncePower","shadowDepth","wiggle","valueLock","brushSize","blend","impasto","mode","brushType","shadowTemp","objectName"].forEach(id=>$(id).addEventListener("input",scheduleRender));
+$("hexInput").addEventListener("change",()=>{let c=parseHex($("hexInput").value);if(c){colors[active]=c;scheduleAll()}});
+function pickSV(e){let r=sv.getBoundingClientRect();colors[active].s=clamp((e.clientX-r.left)/r.width,0,1)*100;colors[active].v=(1-clamp((e.clientY-r.top)/r.height,0,1))*100;scheduleAll()}
+function pickHue(e){let r=hueC.getBoundingClientRect();colors[active].h=clamp((e.clientY-r.top)/r.height,0,1)*360;scheduleAll()}
+let ds=false,dh=false;sv.addEventListener("pointerdown",e=>{ds=true;sv.setPointerCapture(e.pointerId);pickSV(e)});hueC.addEventListener("pointerdown",e=>{dh=true;hueC.setPointerCapture(e.pointerId);pickHue(e)});sv.addEventListener("pointermove",e=>{if(ds)pickSV(e)});hueC.addEventListener("pointermove",e=>{if(dh)pickHue(e)});window.addEventListener("pointerup",()=>{ds=false;dh=false});
+$("randomize").onclick=()=>{colors.local={h:Math.random()*360,s:55+Math.random()*40,v:55+Math.random()*35};colors.key={h:Math.random()*360,s:25+Math.random()*65,v:88+Math.random()*12};colors.ambient={h:Math.random()*360,s:10+Math.random()*40,v:35+Math.random()*30};colors.bounce={h:Math.random()*360,s:25+Math.random()*55,v:50+Math.random()*35};$("angle").value=Math.floor(Math.random()*360);scheduleAll()};
+drawPicker();drawOrb();
+</script>
+</body>
+</html>
